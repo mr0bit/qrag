@@ -94,13 +94,25 @@ When starting a new session, review this file and prefer working on higher-sever
 
 - [x] **M8** `tui.py:271-299` — Embed row's ETA column always showed `—` during `qrag build`. Root cause: `on_embed_batch()` recomputed the embed task's `total` on every batch from a jittery rolling estimate, and Rich's `Progress.update()` calls `task._reset()` (wiping the speed-sample history) whenever `total` changes — so `time_remaining` never had two samples to compute a speed from. Fixed by only updating `total` when the new estimate drifts >10% from the current value. See AD-16.
 
+- [ ] **GH#64** — feat: version-controlled database distribution with incremental SQL-row deltas. [GitHub](https://github.com/inegmdev/qrag/issues/64)
+
+- [ ] **GH#63** `doc_parser.py` — feat: parse Office document formats (docx, xlsx, pptx, csv, odt, rtf). [GitHub](https://github.com/inegmdev/qrag/issues/63)
+
+- [ ] **GH#53** `cli.py`, `tui.py` — feat: real-time live log file during `qrag build`. [GitHub](https://github.com/inegmdev/qrag/issues/53)
+
+- [ ] **GH#74** `explore.py` — live-server integration tests for JFrog and git+LFS backends. Both are currently unit-tested only at the command-construction level (see GH#44). [GitHub](https://github.com/inegmdev/qrag/issues/74)
+
+- [ ] **GH#76** `explore.py` — entry-point plugin discovery for `RemoteBackend`, so third-party backends can register without editing the registry. [GitHub](https://github.com/inegmdev/qrag/issues/76)
+
 ---
 
 ## Low — Nice-to-Have
 
 - [ ] **L8** `chunker.py` — Shebang/content sniffing for extensionless scripts (e.g. `#!/usr/bin/env python`). Currently only extension and filename matching is used. Extensionless executable scripts in a project would be silently skipped.
 
-- [ ] **L9** `cli.py:main()` — Clean user errors trigger the scary "Something went wrong / a log file has been saved / report this issue" banner. Any command that calls `sys.exit(1)` for an expected error (e.g. `explore stats <bogus>` → "version not found", `hub list` → "No repo URL configured") is treated by `main()`'s `SystemExit`/`BaseException` handlers as a crash worth logging. Should distinguish expected user errors (clean message, exit 1, no log/banner) from unexpected exceptions (log + banner) — e.g. raise a dedicated `UserError`/`click.ClickException` that `main()` prints without the report banner.
+- [ ] **L9** / **GH#75** `cli.py:main()` — Clean user errors trigger the scary "Something went wrong / a log file has been saved / report this issue" banner. Any command that calls `sys.exit(1)` for an expected error (e.g. `explore stats <bogus>` → "version not found", `hub list` → "No repo URL configured") is treated by `main()`'s `SystemExit`/`BaseException` handlers as a crash worth logging. Should distinguish expected user errors (clean message, exit 1, no log/banner) from unexpected exceptions (log + banner) — e.g. raise a dedicated `UserError`/`click.ClickException` that `main()` prints without the report banner. [GitHub](https://github.com/inegmdev/qrag/issues/75)
+
+- [ ] **GH#54** — docs: WSL2 + CUDA workaround for uv-managed installs. Likely obsolete — GH#38 removed torch/CUDA entirely; verify and close. [GitHub](https://github.com/inegmdev/qrag/issues/54)
 
 
 
