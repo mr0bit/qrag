@@ -50,7 +50,7 @@ When starting a new session, review this file and prefer working on higher-sever
 
 - [ ] **H4** `cli.py:525` — If a producer thread dies without emitting a sentinel, `queue.get()` busy-loops indefinitely. The `build` command hangs forever with no error.
 
-- [ ] **H5** `chunker.py:50` — Sub-chunk names (`func#0`, `func#1`) can collide with real symbol names. `INSERT OR REPLACE` silently overwrites the correct symbol entry.
+- [ ] **H5** `chunker.py:50`, `database.py:180-183` — Sub-chunk names (`func#0`, `func#1`) can collide with real symbol names. `INSERT OR REPLACE` silently overwrites the correct symbol entry. **Subsumed by GH#80** — the rank-aware `symbols` upsert fixes this and the prototype/definition collision together.
 
 - [ ] **H6** `config.py:29-31` — Malformed `~/.qrag/config.json` raises an uncaught `JSONDecodeError`, breaking every qrag command until the file is manually deleted.
 
@@ -152,3 +152,25 @@ When starting a new session, review this file and prefer working on higher-sever
 
 - [x] **GH#26** `cli.py`, `tui.py` — Rich TUI improvements: proportional CPU split (GH#27), MVC extraction to `tui.py`, scrolling log panel, worker-count header, parse `files/s` rate, status line with live error/warning counts, smart path truncation, `fmt_eta` formatter, terminal-too-small fallback, spinners on hub/search commands. Fixed in `feat/gh26-tui-improvements`. [GitHub](https://github.com/inegmdev/qrag/issues/26)
 
+
+---
+
+## Feature — per-file build outcomes (GH#78)
+
+> **GH#78 is the epic tracking issue.** Implement in order #79 → #80 → #81 → #82 → #83.
+> **#80 must land with or before #81** — without the rank-aware `symbols` upsert, the new
+> prototype symbols nondeterministically clobber real definitions and `get_symbol_definition`
+> starts returning one-line prototypes instead of implementations.
+
+Root problem: a file can pass through `qrag build` and contribute nothing, with no record of
+why. Empty file, umbrella header, prototype-only header, defeated grammar, and silent partial
+extraction are all indistinguishable after the build. `build-report.txt` is per-run and builds
+are incremental (GH#28/#31/#32), so the outcome record must live inside the `.db` that the team
+downloads. Design decisions and the `file_manifest` schema change are recorded in AD-11.
+
+- [ ] **GH#78** [EPIC] — Per-file build outcomes, C declaration coverage, and text fallback. [GitHub](https://github.com/inegmdev/qrag/issues/78)
+- [ ] **GH#79** [OUTCOMES-B] `database.py` — `file_manifest` outcome columns (`status`, `reason`, `chunk_count`, `error_ratio`) + `_MANIFEST_MIGRATIONS` applied inside `_open()` (the existing `_open_code`/`_open_docs` migrations never reach the manifest paths) + `ON CONFLICT` upsert so a plain `touch` no longer erases a recorded status. [GitHub](https://github.com/inegmdev/qrag/issues/79)
+- [ ] **GH#80** [OUTCOMES-D] `database.py` — Rank-aware `symbols` upsert (`definition > prototype > sub-chunk > text`) + `search_code` over-fetch so text chunks can be filtered without breaking top-k. Subsumes **H5**. [GitHub](https://github.com/inegmdev/qrag/issues/80)
+- [ ] **GH#81** [OUTCOMES-C] `chunker.py` — ERROR/MISSING byte-coverage ratio during the existing `visit()` walk; `declaration` rule for C/C++ so prototypes and globals become named symbols (C is the only language without one — cf. Go `:231`, Rust `:220`, JS/TS `:238`); text fallback for genuinely symbol-less files behind `--no-text-fallback`. [GitHub](https://github.com/inegmdev/qrag/issues/81)
+- [ ] **GH#82** [OUTCOMES-E] `cli.py` — Classify each file's outcome, persist it, write a manifest row for errored files (`_KIND_ERROR` at `:858-861` currently writes none), and always re-queue failure statuses so an environmental fix actually takes effect. [GitHub](https://github.com/inegmdev/qrag/issues/82)
+- [ ] **GH#83** [OUTCOMES-F] `explore.py` — Coverage view in `explore stats`: counts by status plus worst-`error_ratio` files. Must degrade to "unknown" on pre-migration DBs, since `_read_manifest` uses a read-only connection and cannot migrate. [GitHub](https://github.com/inegmdev/qrag/issues/83)
