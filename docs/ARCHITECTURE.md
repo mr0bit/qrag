@@ -888,3 +888,23 @@ silently drops the session narrowing back to the full global set — there is
 no persistence by design (Q3). This is treated as acceptable: it fails open
 to previous multi-DB-fan-out behavior rather than failing closed, and a
 session that no longer exists has no state worth persisting.
+
+
+## AD-18 — Producer completion signaling on failure
+
+**Decision:** The thread entry point `_run_producer_safely` owns the completion sentinel. Code and document producers only enqueue results and per-file errors. The wrapper records unexpected producer exceptions (including thread-local SystemExit/KeyboardInterrupt) and sends exactly one sentinel in `finally`.
+
+**Why:** Pool construction, submission, iteration, or shutdown can raise outside the per-file handler. Previously that killed the producer without signaling the consumer, which waited indefinitely. Sentinel delivery after queued results lets the consumer flush completed work before the existing failed-build report and exit-1 path runs. Failed files remain eligible for retry and resume state is retained.
+
+```mermaid
+flowchart TD
+    A[Producer wrapper] --> B[Code or document producer]
+    B --> C[Queue results and per-file errors]
+    B -->|Unexpected exception| D[Record producer failure and queue error]
+    C --> E[Finally enqueue one completion sentinel]
+    D --> E
+    E --> F[Consumer drains results and flushes progress]
+    F --> G[Write failed report and exit 1 if errors exist]
+```
+
+**Trade-off:** This guarantees signaling when the producer unwinds. It does not impose timeouts on a living but stalled process pool, or recover from termination of the whole application. The main thread still owns user interrupt handling.

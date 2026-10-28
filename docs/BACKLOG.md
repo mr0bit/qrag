@@ -48,7 +48,7 @@ When starting a new session, review this file and prefer working on higher-sever
 
 - [x] **H3** `cli.py:build` — Verified the existing producer-error guard exits 1 before activation or success output. Failed builds now also write a FAILED build report with file paths and error messages, retaining resume state. Regression coverage includes code/docs producers and normal/verbose output.
 
-- [ ] **H4** `cli.py:525` — If a producer thread dies without emitting a sentinel, `queue.get()` busy-loops indefinitely. The `build` command hangs forever with no error.
+- [x] **H4** `cli.py` — Producer crashes now pass through `_run_producer_safely`, which records the failure and guarantees exactly one completion sentinel in `finally`. The consumer drains queued results, preserves checkpoints/resume state, writes a FAILED report, and exits 1. Tests cover code/docs/dual builds and pool startup/submission/shutdown failures. A live but stalled worker is outside this fix.
 
 - [ ] **H5** `chunker.py:50` — Sub-chunk names (`func#0`, `func#1`) can collide with real symbol names. `INSERT OR REPLACE` silently overwrites the correct symbol entry.
 

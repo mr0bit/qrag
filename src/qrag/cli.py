@@ -685,6 +685,21 @@ _KIND_DOC = "doc"
 _KIND_ERROR = "error"
 
 
+def _run_producer_safely(producer, kind, files, workers, q, errors) -> None:
+    """Own completion signaling, including failures outside per-file futures."""
+    try:
+        producer(files, workers, q, errors)
+    except BaseException as exc:
+        # SystemExit/KeyboardInterrupt raised in a worker thread must also
+        # reach the build caller instead of silently abandoning the queue.
+        message = f"{type(exc).__name__}: {exc}"
+        errors.append((f"<{kind} producer>", message))
+        q.put((_KIND_ERROR, message, 0.0, "", f"<{kind} producer>"))
+    finally:
+        # Exactly one sentinel per producer, after all its queued results.
+        q.put(None)
+
+
 def _run_code_producer(
     to_process: dict,
     workers: int | None,
@@ -704,7 +719,6 @@ def _run_code_producer(
             except Exception as e:
                 errors.append((str(Path(root) / rel), str(e)))
                 q.put((_KIND_ERROR, str(e), 0.0, root, rel))
-    q.put(None)  # sentinel
 
 
 def _run_doc_producer(
@@ -726,7 +740,6 @@ def _run_doc_producer(
             except Exception as e:
                 errors.append((str(Path(root) / rel), str(e)))
                 q.put((_KIND_ERROR, str(e), 0.0, root, rel))
-    q.put(None)  # sentinel
 
 
 def _flush_code_batch(
@@ -1334,8 +1347,8 @@ def build(input_dirs: tuple[Path, ...], output: str, device: str, limit_cpu: int
 
         if to_process:
             t = threading.Thread(
-                target=_run_code_producer,
-                args=(to_process, code_workers, q, producer_errors),
+                target=_run_producer_safely,
+                args=(_run_code_producer, _KIND_CODE, to_process, code_workers, q, producer_errors),
                 daemon=True,
             )
             t.start()
@@ -1343,8 +1356,8 @@ def build(input_dirs: tuple[Path, ...], output: str, device: str, limit_cpu: int
 
         if to_process_docs:
             t = threading.Thread(
-                target=_run_doc_producer,
-                args=(to_process_docs, doc_workers, q, producer_errors),
+                target=_run_producer_safely,
+                args=(_run_doc_producer, _KIND_DOC, to_process_docs, doc_workers, q, producer_errors),
                 daemon=True,
             )
             t.start()
