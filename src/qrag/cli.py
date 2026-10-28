@@ -970,6 +970,8 @@ def _write_build_report(
         "=" * 72,
         "SUMMARY",
         "=" * 72,
+        f"Status                 : {'FAILED' if parse_errors else 'SUCCESS'}",
+        f"Files failed           : {len(parse_errors)}",
         f"Total wall-clock time  : {_fmt_elapsed(total_elapsed)}",
         f"Code files processed   : {len(code_records)} ({len(code_skipped)} skipped)",
         f"Doc files processed    : {len(doc_records)} ({len(doc_skipped)} skipped)",
@@ -1038,6 +1040,12 @@ def _write_build_report(
         ]
         for path, reason in sorted(all_skipped):
             lines.append(f"{reason:<15} {path}")
+        lines.append("")
+
+    if parse_errors:
+        lines += ["=" * 72, "PROCESSING ERRORS", "=" * 72]
+        for path, message in parse_errors:
+            lines.append(f"{path}: {message}")
         lines.append("")
 
     report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -1370,13 +1378,6 @@ def build(input_dirs: tuple[Path, ...], output: str, device: str, limit_cpu: int
             click.echo(f"  Warning: {path}: {msg}", err=True)
             _logger.error("producer error: %s: %s", path, msg)
 
-        if producer_errors:
-            click.echo(
-                f"[build] {len(producer_errors)} file(s) failed to process.",
-                err=True,
-            )
-            sys.exit(1)
-
         # GH#28: manifest rows are now written incrementally inside _consume_and_embed.
         # Log counts for diagnostics only.
         if successful_code:
@@ -1390,6 +1391,14 @@ def build(input_dirs: tuple[Path, ...], output: str, device: str, limit_cpu: int
             out_dir, file_records, producer_errors, total_elapsed,
             code_stored, docs_stored, db_path, ddb_path,
         )
+
+        if producer_errors:
+            click.echo(
+                f"[build] FAILED: {len(producer_errors)} file(s) failed to process.",
+                err=True,
+            )
+            click.echo(f"  Build report: {report_path}", err=True)
+            sys.exit(1)
 
         # IS1 — uv-style final summary (bars already collapsed via transient=True)
         parts = []
