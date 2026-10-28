@@ -46,7 +46,7 @@ When starting a new session, review this file and prefer working on higher-sever
 
 - [x] **GH#23** `chunker.py` / `doc_parser.py` — Build fails with `'bytes' object is not an instance of 'str'` across `.js`, `.h`, `.c`, `.mk` files during the producer phase. Fixed in `pyproject.toml`: pinned `tree-sitter-language-pack<1.0.0` — v1.x (kreuzberg-dev "alef") changed `Parser.parse()` to require `str` not `bytes`; v0.x returns standard `tree_sitter.Parser` that accepts `bytes`. [GitHub](https://github.com/inegmdev/qrag/issues/23)
 
-- [ ] **H3** `cli.py:436-440` — Producer exceptions are caught and appended to an errors list, but `build` still exits with code `0` and reports success. A corrupted or incomplete database looks valid.
+- [x] **H3** `cli.py:build` — Verified the existing producer-error guard exits 1 before activation or success output. Failed builds now also write a FAILED build report with file paths and error messages, retaining resume state. Regression coverage includes code/docs producers and normal/verbose output.
 
 - [ ] **H4** `cli.py:525` — If a producer thread dies without emitting a sentinel, `queue.get()` busy-loops indefinitely. The `build` command hangs forever with no error.
 
