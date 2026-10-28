@@ -129,6 +129,8 @@ Full authoritative list: [`docs/BACKLOG.md`](docs/BACKLOG.md).
 
 ## Git & PR State (as of 2026-07-01)
 
+Update 2026-10-28: PR [#84](https://github.com/mr0bit/qrag/pull/84), branch `fix/build-failure-report`, is open for review. H3's nonzero-exit guard was already present; failed builds now retain a fresh report with explicit failure status and error details before exiting. 121 targeted tests passed, including eight new build-outcome regression cases; real-model integration tests were not run.
+
 | PR / Issue | Branch | State |
 |------------|--------|-------|
 | #10 | `feat/uv-install-and-error-logging` | Merged |
