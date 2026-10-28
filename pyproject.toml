@@ -38,6 +38,7 @@ full = [
 dev = [
     "qrag[cpu]",
     "pytest>=8",
+    "pytest-timeout>=2.3",
     "pytest-cov>=5",
     "rich>=13.0",
 ]
